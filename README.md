@@ -76,6 +76,17 @@ I highly recommend to add a bounty to the issue that you're waiting for to incre
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 
+- [React & Redux in TypeScript - Complete Guide](#react--redux-in-typescript---complete-guide)
+    - [**What's new?**](#whats-new)
+    - [**Goals**](#goals)
+    - [**React, Redux, Typescript Ecosystem**](#react-redux-typescript-ecosystem)
+    - [**Examples**](#examples)
+    - [**Playground Project**](#playground-project)
+  - [Contributing Guide](#contributing-guide)
+  - [Funding](#funding)
+  - [Table of Contents](#table-of-contents)
+- [Installation](#installation)
+    - [Type-Definitions for React & Redux](#type-definitions-for-react--redux)
 - [React - Type-Definitions Cheatsheet](#react---type-definitions-cheatsheet)
     - [`React.FC<Props>` | `React.FunctionComponent<Props>`](#reactfcprops--reactfunctioncomponentprops)
     - [`React.Component<Props, State>`](#reactcomponentprops-state)
@@ -119,10 +130,14 @@ I highly recommend to add a bounty to the issue that you're waiting for to incre
 - [Redux - Typing Patterns](#redux---typing-patterns)
   - [Store Configuration](#store-configuration)
     - [Create Global Store Types](#create-global-store-types)
+      - [`RootState` - type representing root state-tree](#rootstate---type-representing-root-state-tree)
+      - [`RootAction` - type representing union type of all action objects](#rootaction---type-representing-union-type-of-all-action-objects)
     - [Create Store](#create-store)
   - [Action Creators 🌟](#action-creators-)
   - [Reducers](#reducers)
     - [State with Type-level Immutability](#state-with-type-level-immutability)
+      - [Caveat - `Readonly` is not recursive](#caveat---readonly-is-not-recursive)
+      - [Solution - recursive `Readonly` is called `DeepReadonly`](#solution---recursive-readonly-is-called-deepreadonly)
     - [Typing reducer](#typing-reducer)
     - [Typing reducer with `typesafe-actions`](#typing-reducer-with-typesafe-actions)
     - [Testing reducer](#testing-reducer)
@@ -138,15 +153,29 @@ I highly recommend to add a bounty to the issue that you're waiting for to incre
   - [tsconfig.json](#tsconfigjson)
   - [TSLib](#tslib)
   - [TSLint](#tslint)
+      - [tslint.json](#tslintjson)
   - [ESLint](#eslint)
+      - [.eslintrc](#eslintrc)
   - [Jest](#jest)
+      - [jest.config.json](#jestconfigjson)
+      - [jest.stubs.js](#jeststubsjs)
   - [Style Guides](#style-guides)
     - ["react-styleguidist"](#react-styleguidist)
 - [Recipes](#recipes)
     - [General Tips](#general-tips)
+      - [- should I still use React.PropTypes in TS?](#--should-i-still-use-reactproptypes-in-ts)
+      - [- when to use `interface` declarations and when `type` aliases?](#--when-to-use-interface-declarations-and-when-type-aliases)
+      - [- what's better default or named exports?](#--whats-better-default-or-named-exports)
+      - [- how to best initialize class instance or static properties?](#--how-to-best-initialize-class-instance-or-static-properties)
+      - [- how to best declare component handler functions?](#--how-to-best-declare-component-handler-functions)
     - [Ambient Modules Tips](#ambient-modules-tips)
+      - [Imports in ambient modules](#imports-in-ambient-modules)
     - [Type-Definitions Tips](#type-definitions-tips)
+      - [Missing type-definitions error](#missing-type-definitions-error)
+      - [Using custom `d.ts` files for npm modules](#using-custom-dts-files-for-npm-modules)
     - [Type Augmentation Tips](#type-augmentation-tips)
+      - [Augmenting library internal declarations - using relative import](#augmenting-library-internal-declarations---using-relative-import)
+      - [Augmenting library public declarations - using node_modules import](#augmenting-library-public-declarations---using-node_modules-import)
   - [Tutorials & Articles](#tutorials--articles)
   - [Contributors](#contributors)
 
@@ -1937,11 +1966,15 @@ From practical side, using `interface` declaration will create an identity (inte
 Although I prefer to use `type` most of the time there are some places this can become too noisy when reading compiler errors and that's why I like to leverage this distinction to hide some of not so important type details in errors using interfaces identity.
 Related `ts-lint` rule: https://palantir.github.io/tslint/rules/interface-over-type-literal/  
 
+> NOTE: 这意见没有什么用
+
 [⇧ back to top](#table-of-contents)
 
 #### - what's better default or named exports?
 A common flexible solution is to use module folder pattern, because you can leverage both named and default import when you see fit.  
 With this solution you'll achieve better encapsulation and be able to safely refactor internal naming and folders structure without breaking your consumer code:
+
+> 在文件夹下，每个模块文件用 export default，index.ts 用 export { default as ModuleName }
 
 ```ts
 // 1. create your component files (`select.tsx`) using default export in some folder:
@@ -1953,7 +1986,7 @@ export default Select;
 
 // 2. in this folder create an `index.ts` file that will re-export components with named exports:
 
-// components/index.ts
+// components/index.ts NOTE: 这个导出方式还从来没试过
 export { default as Select } from './select';
 ...
 
@@ -1972,7 +2005,7 @@ import Select from '@src/components/select';
 Prefered modern syntax is to use class Property Initializers  
 ```tsx
 class ClassCounterWithInitialCount extends React.Component<Props, State> {
-  // default props using Property Initializers
+  // default props using Property Initializers NOTE: 这种方式还从来没见过，即默认值可以单独声明
   static defaultProps: DefaultProps = {
     className: 'default-class',
     initialCount: 0,
@@ -2021,6 +2054,7 @@ When creating 3rd party type-definitions all the imports should be kept inside t
 
 ```ts
 declare module "react-custom-scrollbars" {
+    // NOTE: 创建第三方库的声明时，所有的 module import 都得在声明里面
     import * as React from "react";
     export interface positionValues {
     ...
